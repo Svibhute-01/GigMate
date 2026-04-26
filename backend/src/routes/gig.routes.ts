@@ -1,0 +1,21 @@
+import { Router } from "express";
+import {
+  listGigs,
+  getGig,
+  getMyGigs,
+  createGig,
+  updateGig,
+  deleteGig,
+} from "../controllers/gig.controller.js";
+import { authRequired, requireRole } from "../middleware/auth.js";
+
+const router = Router();
+
+router.get("/", listGigs);
+router.get("/mine/list", authRequired, requireRole("student"), getMyGigs);
+router.get("/:id", getGig);
+router.post("/", authRequired, requireRole("student"), createGig);
+router.put("/:id", authRequired, requireRole("student"), updateGig);
+router.delete("/:id", authRequired, requireRole("student"), deleteGig);
+
+export default router;
