@@ -138,14 +138,13 @@ This project is licensed under the MIT License.
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
 
-**Snehal Vibhute**
-**Nilam Kumbhar**
-**Shruti Konduskar**
+- Snehal Vibhute
+- Nilam Kumbhar
+- Shruti Konduskar
 
-Computer Science Engineering Student | Full-Stack Developer
-
+Computer Science Engineering Students | Full-Stack Developers
 
 
 ---
