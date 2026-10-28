@@ -16,24 +16,57 @@ export async function status(req, res) {
 // Step 1: send a 6-digit code to the college email (students) or login email (clients).
 // There is no mail server in this project, so the code is printed to the server console and,
 // outside production, returned in the response as `devOtp`.
+
+import { sendOtpEmail } from "../utils/mailer.js";
+
 export async function sendOtp(req, res) {
     const user = req.userDoc;
-    const { email } = z.object({ email: z.string().email().toLowerCase() }).parse(req.body);
+
+    const { email } = z
+        .object({ email: z.string().email().toLowerCase() })
+        .parse(req.body);
+
     if (user.role === "student") {
-        assert(COLLEGE_EMAIL_RE.test(email), 400, "Students must use a college email (ending in .edu, .ac.in, .edu.in, ...)");
+        assert(
+            COLLEGE_EMAIL_RE.test(email),
+            400,
+            "Students must use a college email (ending in .edu, .ac.in, .edu.in, ...)"
+        );
     }
+
     const otp = String(crypto.randomInt(100000, 1000000));
+
+    // Save the verification details.
     user.verification.collegeEmail = email;
     user.verification.emailVerified = false;
     user.verification.otpHash = hash(otp);
     user.verification.otpExpires = new Date(Date.now() + OTP_TTL_MS);
     user.verification.otpAttempts = 0;
+
     await user.save();
-    console.log(`[OTP] ${email}: ${otp}`);
-    const body = { message: `OTP sent to ${email}. It expires in 10 minutes.` };
-    if (process.env.NODE_ENV !== "production") body.devOtp = otp;
-    res.json(body);
+
+    try {
+        // Send the OTP through SMTP.
+        await sendOtpEmail(email, otp);
+
+        // Never expose OTPs in production responses or logs.
+        return res.json({
+            message: `OTP sent to ${email}. It expires in 10 minutes.`,
+        });
+    } catch (error) {
+        console.error("OTP email delivery failed:", error.message);
+
+        // Invalidate the OTP if email delivery fails.
+        user.verification.otpHash = undefined;
+        user.verification.otpExpires = undefined;
+        await user.save();
+
+        return res.status(502).json({
+            message: "Unable to send the verification email. Please try again.",
+        });
+    }
 }
+
 
 // Step 2: confirm the code.
 export async function confirmOtp(req, res) {
