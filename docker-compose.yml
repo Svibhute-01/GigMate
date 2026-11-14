@@ -1,0 +1,38 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      MONGO_URL: mongodb://mongo:27017
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:5000
+      AUTO_RELEASE_DAYS: 7
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gigmate.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-please}
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5000:80"
+
+volumes:
+  mongo-data:
